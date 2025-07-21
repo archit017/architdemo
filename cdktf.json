@@ -1,0 +1,14 @@
+{
+  "language": "typescript",
+  "app": "npm run build && node dist/main.js",
+  "projectId": "b8e0a5b0-2b1e-4b0a-8b0a-5b0a8b0a5b0a",
+  "terraformProviders": [
+    "azurerm@~>3.0",
+    "random@~>3.0"
+  ],
+  "terraformModules": [],
+  "context": {
+    "@cdktf/provider-azurerm": "12.0.0",
+    "@cdktf/provider-random": "11.0.0"
+  }
+}

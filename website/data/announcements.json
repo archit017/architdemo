@@ -1,0 +1,29 @@
+[
+  {
+    "id": "ads-initiative-launch",
+    "title": "Microsoft Ads Initiative - Platform Launch",
+    "content": "We're excited to announce the upcoming launch of Microsoft's revolutionary advertising platform. This new initiative will transform how businesses connect with their audiences through AI-powered targeting and real-time optimization.",
+    "type": "major",
+    "date": "2025-07-21",
+    "active": true,
+    "priority": 1
+  },
+  {
+    "id": "early-access-program",
+    "title": "Early Access Program Now Open",
+    "content": "Join our exclusive early access program to be among the first to experience the next generation of digital advertising. Limited spots available for qualifying businesses.",
+    "type": "info",
+    "date": "2025-07-15", 
+    "active": true,
+    "priority": 2
+  },
+  {
+    "id": "partnership-expansion",
+    "title": "Strategic Partnership Expansion",
+    "content": "Microsoft Ads Initiative is expanding partnerships with leading marketing agencies and technology providers to deliver comprehensive advertising solutions.",
+    "type": "update",
+    "date": "2025-07-10",
+    "active": true,
+    "priority": 3
+  }
+]

@@ -1,0 +1,44 @@
+{
+  "name": "azure-microsite-terraform-cdk",
+  "version": "1.0.0",
+  "description": "Production-ready Azure microsite using Terraform CDK",
+  "main": "src/main.ts",
+  "scripts": {
+    "build": "tsc",
+    "synth": "cdktf synth",
+    "deploy": "cdktf deploy",
+    "destroy": "cdktf destroy",
+    "get": "cdktf get",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "lint": "eslint src/**/*.ts",
+    "lint:fix": "eslint src/**/*.ts --fix",
+    "security:check": "git secrets --scan && npm audit",
+    "pre-deploy": "npm run build && npm run lint && npm run test && npm run security:check"
+  },
+  "keywords": [
+    "terraform",
+    "cdk",
+    "azure",
+    "microsite",
+    "static-web-app"
+  ],
+  "author": "Platform Engineering Team",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/jest": "^29.5.0",
+    "@types/node": "^18.15.0",
+    "@typescript-eslint/eslint-plugin": "^5.57.0",
+    "@typescript-eslint/parser": "^5.57.0",
+    "eslint": "^8.37.0",
+    "jest": "^29.5.0",
+    "ts-jest": "^29.1.0",
+    "typescript": "^5.0.0"
+  },
+  "dependencies": {
+    "@cdktf/provider-azurerm": "^12.0.0",
+    "@cdktf/provider-random": "^11.0.0",
+    "cdktf": "^0.21.0",
+    "constructs": "^10.3.0"
+  }
+}
