@@ -47,6 +47,12 @@ export class MicrositeStack extends TerraformStack {
       description: 'The name of the static web app'
     });
 
+    new TerraformOutput(this, 'static-web-app-api-key', {
+      value: this.staticWebApp.apiKey,
+      description: 'The API key for deploying to the static web app',
+      sensitive: true
+    });
+
     new TerraformOutput(this, 'resource-group-name', {
       value: this.resourceGroup.name,
       description: 'The name of the resource group'

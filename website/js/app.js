@@ -48,12 +48,24 @@ const utils = {
 const analytics = {
   // Track events (integrates with Application Insights)
   trackEvent: (eventName, properties = {}) => {
-    if (typeof trackEvent === 'function') {
-      trackEvent(eventName, {
+    // Use the global trackEvent function from Application Insights
+    if (typeof window.trackEvent === 'function') {
+      window.trackEvent(eventName, {
         ...properties,
         timestamp: new Date().toISOString(),
         url: window.location.href,
         userAgent: navigator.userAgent
+      });
+    } else if (window.appInsights && window.appInsights.trackEvent) {
+      // Direct Application Insights call
+      window.appInsights.trackEvent({
+        name: eventName,
+        properties: {
+          ...properties,
+          timestamp: new Date().toISOString(),
+          url: window.location.href,
+          userAgent: navigator.userAgent
+        }
       });
     }
     

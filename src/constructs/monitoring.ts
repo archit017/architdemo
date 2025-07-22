@@ -55,7 +55,7 @@ export class Monitoring extends Construct {
     });
 
     this.keyVault = new KeyVault(this, 'KeyVault', {
-      name: `kv-microsite-${props.environment}-${Math.random().toString(36).substring(2, 8)}`,
+      name: `kv-ms-${props.environment.substring(0, 3)}-${Math.random().toString(36).substring(2, 8)}`,
       resourceGroupName: props.resourceGroup.name,
       location: props.resourceGroup.location,
       
@@ -82,7 +82,7 @@ export class Monitoring extends Construct {
     });
 
     this.actionGroup = new MonitorActionGroup(this, 'ActionGroup', {
-      name: `ag-microsite-${props.environment}`,
+      name: `ag-ms-${props.environment.substring(0, 3)}`,
       resourceGroupName: props.resourceGroup.name,
       shortName: 'microsite',
       

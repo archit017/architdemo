@@ -1,0 +1,83 @@
+name: Destroy Infrastructure
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to destroy'
+        required: true
+        type: choice
+        options:
+        - staging
+        - production
+      confirm:
+        description: 'Type "DESTROY" to confirm'
+        required: true
+
+env:
+  NODE_VERSION: '18'
+  TERRAFORM_VERSION: '1.6.0'
+
+jobs:
+  destroy:
+    name: Destroy Infrastructure
+    runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.environment }}
+    
+    steps:
+      - name: Validate confirmation
+        if: github.event.inputs.confirm != 'DESTROY'
+        run: |
+          echo "❌ Destruction not confirmed. Please type 'DESTROY' to confirm."
+          exit 1
+
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build CDK
+        run: |
+          npm run build
+          npx cdktf get
+          npx cdktf synth --output terraform/
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TERRAFORM_VERSION }}
+
+      - name: Azure login
+        uses: azure/login@v1
+        with:
+          creds: |
+            {
+              "clientId": "${{ secrets.ARM_CLIENT_ID }}",
+              "clientSecret": "${{ secrets.ARM_CLIENT_SECRET }}",
+              "subscriptionId": "${{ secrets.ARM_SUBSCRIPTION_ID }}",
+              "tenantId": "${{ secrets.ARM_TENANT_ID }}"
+            }
+
+      - name: Destroy Monitoring Stack
+        run: |
+          cd terraform/stacks/monitoring-${{ github.event.inputs.environment }}
+          terraform init
+          terraform destroy -auto-approve
+
+      - name: Destroy Microsite Stack
+        run: |
+          cd terraform/stacks/microsite-${{ github.event.inputs.environment }}
+          terraform init
+          terraform destroy -auto-approve
+
+      - name: Verify Destruction
+        run: |
+          echo "🗑️ Infrastructure for ${{ github.event.inputs.environment }} has been destroyed"
+          echo "Please verify in Azure Portal that all resources have been removed"

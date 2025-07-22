@@ -42,6 +42,12 @@ export class MonitoringStack extends TerraformStack {
       description: 'Application Insights connection string'
     });
 
+    new TerraformOutput(this, 'application-insights-instrumentation-key', {
+      value: this.monitoring.applicationInsights.instrumentationKey,
+      sensitive: true,
+      description: 'Application Insights instrumentation key'
+    });
+
     new TerraformOutput(this, 'log-analytics-workspace-id', {
       value: this.monitoring.logAnalyticsWorkspace.workspaceId,
       description: 'Log Analytics workspace ID'

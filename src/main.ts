@@ -31,6 +31,7 @@ Object.entries(environments).forEach(([envName, config]) => {
 
   new MonitoringStack(app, `monitoring-${envName}`, {
     ...config,
+    resourceGroupName: `rg-monitoring-${envName}`,  // Use separate resource group for monitoring
     staticWebApp: micrositeStack.staticWebApp,
     tags: {
       Environment: config.environment,
