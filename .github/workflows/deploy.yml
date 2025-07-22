@@ -547,9 +547,9 @@ jobs:
           fi
           
           # Import Action Group if it exists
-          if az monitor action-group show --name ag-ms-prod --resource-group rg-monitoring-production --output none 2>/dev/null; then
+          if az monitor action-group show --name ag-ms-pro --resource-group rg-monitoring-production --output none 2>/dev/null; then
             echo "Importing existing Action Group..."
-            AG_ID=$(az monitor action-group show --name ag-ms-prod --resource-group rg-monitoring-production --query id --output tsv)
+            AG_ID=$(az monitor action-group show --name ag-ms-pro --resource-group rg-monitoring-production --query id --output tsv)
             # Fix case sensitivity in resource ID - Azure CLI returns lowercase, Terraform expects proper case
             AG_ID_FIXED=$(echo "$AG_ID" | sed 's|/providers/microsoft.insights/|/providers/Microsoft.Insights/|g')
             echo "Original ID: $AG_ID"
