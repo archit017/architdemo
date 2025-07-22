@@ -273,7 +273,11 @@ jobs:
           if az monitor app-insights component show --app ai-microsite-staging --resource-group rg-monitoring-staging --output none 2>/dev/null; then
             echo "Importing existing Application Insights..."
             AI_ID=$(az monitor app-insights component show --app ai-microsite-staging --resource-group rg-monitoring-staging --query id --output tsv)
-            terraform import azurerm_application_insights.Monitoring_ApplicationInsights_B682F62A "$AI_ID" || echo "Application Insights already in state"
+            # Fix case sensitivity in resource ID - Azure CLI returns lowercase, Terraform expects proper case
+            AI_ID_FIXED=$(echo "$AI_ID" | sed 's|/providers/microsoft.insights/|/providers/Microsoft.Insights/|g')
+            echo "Original ID: $AI_ID"
+            echo "Fixed ID: $AI_ID_FIXED"
+            terraform import azurerm_application_insights.Monitoring_ApplicationInsights_B682F62A "$AI_ID_FIXED" || echo "Application Insights already in state"
           fi
           
           # Import Log Analytics workspace if it exists
@@ -283,16 +287,49 @@ jobs:
             terraform import azurerm_log_analytics_workspace.Monitoring_LogAnalyticsWorkspace_CA05C32D "$LAW_ID" || echo "Log Analytics workspace already in state"
           fi
           
+          # Import Action Group if it exists
+          if az monitor action-group show --name ag-ms-sta --resource-group rg-monitoring-staging --output none 2>/dev/null; then
+            echo "Importing existing Action Group..."
+            AG_ID=$(az monitor action-group show --name ag-ms-sta --resource-group rg-monitoring-staging --query id --output tsv)
+            # Fix case sensitivity in resource ID - Azure CLI returns lowercase, Terraform expects proper case
+            AG_ID_FIXED=$(echo "$AG_ID" | sed 's|/providers/microsoft.insights/|/providers/Microsoft.Insights/|g')
+            echo "Original ID: $AG_ID"
+            echo "Fixed ID: $AG_ID_FIXED"
+            terraform import azurerm_monitor_action_group.Monitoring_ActionGroup_EA7C77AA "$AG_ID_FIXED" || echo "Action Group already in state"
+          fi
+          
           # Import Key Vault if it exists (get the actual name from the plan)
-          terraform plan -out=tfplan
-          KV_NAME=$(terraform show -json tfplan | jq -r '.planned_values.root_module.resources[] | select(.type == "azurerm_key_vault") | .values.name' 2>/dev/null || echo "")
+          terraform plan -out=tfplan-initial
+          KV_NAME=$(terraform show -json tfplan-initial | jq -r '.planned_values.root_module.resources[] | select(.type == "azurerm_key_vault") | .values.name' 2>/dev/null || echo "")
           if [ ! -z "$KV_NAME" ] && az keyvault show --name "$KV_NAME" --resource-group rg-monitoring-staging --output none 2>/dev/null; then
             echo "Importing existing Key Vault: $KV_NAME"
             KV_ID="/subscriptions/${{ secrets.ARM_SUBSCRIPTION_ID }}/resourceGroups/rg-monitoring-staging/providers/Microsoft.KeyVault/vaults/$KV_NAME"
             terraform import azurerm_key_vault.Monitoring_KeyVault_20EA9E27 "$KV_ID" || echo "Key Vault already in state"
           fi
           
-          # Apply the configuration
+          # Import Metric Alerts if they exist
+          if az monitor metrics alert show --name alert-performance-microsite-staging --resource-group rg-monitoring-staging --output none 2>/dev/null; then
+            echo "Importing existing Performance Alert..."
+            PERF_ALERT_ID=$(az monitor metrics alert show --name alert-performance-microsite-staging --resource-group rg-monitoring-staging --query id --output tsv)
+            # Fix case sensitivity in resource ID - Azure CLI returns lowercase, Terraform expects proper case
+            PERF_ALERT_ID_FIXED=$(echo "$PERF_ALERT_ID" | sed 's|/providers/microsoft.insights/|/providers/Microsoft.Insights/|g')
+            echo "Original ID: $PERF_ALERT_ID"
+            echo "Fixed ID: $PERF_ALERT_ID_FIXED"
+            terraform import azurerm_monitor_metric_alert.Monitoring_PerformanceAlert_F49D4E5C "$PERF_ALERT_ID_FIXED" || echo "Performance Alert already in state"
+          fi
+          
+          if az monitor metrics alert show --name alert-uptime-microsite-staging --resource-group rg-monitoring-staging --output none 2>/dev/null; then
+            echo "Importing existing Uptime Alert..."
+            UPTIME_ALERT_ID=$(az monitor metrics alert show --name alert-uptime-microsite-staging --resource-group rg-monitoring-staging --query id --output tsv)
+            # Fix case sensitivity in resource ID - Azure CLI returns lowercase, Terraform expects proper case  
+            UPTIME_ALERT_ID_FIXED=$(echo "$UPTIME_ALERT_ID" | sed 's|/providers/microsoft.insights/|/providers/Microsoft.Insights/|g')
+            echo "Original ID: $UPTIME_ALERT_ID"
+            echo "Fixed ID: $UPTIME_ALERT_ID_FIXED"
+            terraform import azurerm_monitor_metric_alert.Monitoring_UptimeAlert_02777EE5 "$UPTIME_ALERT_ID_FIXED" || echo "Uptime Alert already in state"
+          fi
+          
+          # Create a fresh plan after all imports to avoid stale plan issues
+          echo "Creating fresh plan after imports..."
           terraform plan -out=tfplan
           terraform apply -auto-approve tfplan
 
@@ -491,39 +528,68 @@ jobs:
             terraform import azurerm_resource_group.ResourceGroup /subscriptions/${{ secrets.ARM_SUBSCRIPTION_ID }}/resourceGroups/rg-monitoring-production 2>/dev/null || echo "Resource group already in state or import failed"
           fi
           
-          # Run terraform plan first to see what resources it wants to create
-          terraform plan -out=tfplan
-          
-          # Import Application Insights if it exists and Terraform wants to create it
+          # Import Application Insights if it exists
           if az monitor app-insights component show --app ai-microsite-production --resource-group rg-monitoring-production --output none 2>/dev/null; then
-            if terraform show -json tfplan | grep -q "ai-microsite-production"; then
-              echo "Importing existing Application Insights..."
-              AI_ID=$(az monitor app-insights component show --app ai-microsite-production --resource-group rg-monitoring-production --query id --output tsv)
-              # Find the resource address from the plan
-              AI_RESOURCE=$(terraform show -json tfplan | jq -r '.planned_values.root_module.resources[] | select(.type == "azurerm_application_insights" and .values.name == "ai-microsite-production") | .address')
-              if [ ! -z "$AI_RESOURCE" ] && [ "$AI_RESOURCE" != "null" ]; then
-                terraform import "$AI_RESOURCE" "$AI_ID" || echo "Application Insights import failed"
-                # Re-plan after import
-                terraform plan -out=tfplan
-              fi
-            fi
+            echo "Importing existing Application Insights..."
+            AI_ID=$(az monitor app-insights component show --app ai-microsite-production --resource-group rg-monitoring-production --query id --output tsv)
+            # Fix case sensitivity in resource ID - Azure CLI returns lowercase, Terraform expects proper case
+            AI_ID_FIXED=$(echo "$AI_ID" | sed 's|/providers/microsoft.insights/|/providers/Microsoft.Insights/|g')
+            echo "Original ID: $AI_ID"
+            echo "Fixed ID: $AI_ID_FIXED"
+            terraform import azurerm_application_insights.Monitoring_ApplicationInsights_B682F62A "$AI_ID_FIXED" || echo "Application Insights already in state"
           fi
           
-          # Import Log Analytics workspace if it exists and Terraform wants to create it
+          # Import Log Analytics workspace if it exists
           if az monitor log-analytics workspace show --workspace-name law-microsite-production --resource-group rg-monitoring-production --output none 2>/dev/null; then
-            if terraform show -json tfplan | grep -q "law-microsite-production"; then
-              echo "Importing existing Log Analytics workspace..."
-              LAW_ID=$(az monitor log-analytics workspace show --workspace-name law-microsite-production --resource-group rg-monitoring-production --query id --output tsv)
-              # Find the resource address from the plan
-              LAW_RESOURCE=$(terraform show -json tfplan | jq -r '.planned_values.root_module.resources[] | select(.type == "azurerm_log_analytics_workspace" and .values.name == "law-microsite-production") | .address')
-              if [ ! -z "$LAW_RESOURCE" ] && [ "$LAW_RESOURCE" != "null" ]; then
-                terraform import "$LAW_RESOURCE" "$LAW_ID" || echo "Log Analytics workspace import failed"
-                # Re-plan after import
-                terraform plan -out=tfplan
-              fi
-            fi
+            echo "Importing existing Log Analytics workspace..."
+            LAW_ID=$(az monitor log-analytics workspace show --workspace-name law-microsite-production --resource-group rg-monitoring-production --query id --output tsv)
+            terraform import azurerm_log_analytics_workspace.Monitoring_LogAnalyticsWorkspace_CA05C32D "$LAW_ID" || echo "Log Analytics workspace already in state"
           fi
           
+          # Import Action Group if it exists
+          if az monitor action-group show --name ag-ms-prod --resource-group rg-monitoring-production --output none 2>/dev/null; then
+            echo "Importing existing Action Group..."
+            AG_ID=$(az monitor action-group show --name ag-ms-prod --resource-group rg-monitoring-production --query id --output tsv)
+            # Fix case sensitivity in resource ID - Azure CLI returns lowercase, Terraform expects proper case
+            AG_ID_FIXED=$(echo "$AG_ID" | sed 's|/providers/microsoft.insights/|/providers/Microsoft.Insights/|g')
+            echo "Original ID: $AG_ID"
+            echo "Fixed ID: $AG_ID_FIXED"
+            terraform import azurerm_monitor_action_group.Monitoring_ActionGroup_EA7C77AA "$AG_ID_FIXED" || echo "Action Group already in state"
+          fi
+          
+          # Import Key Vault if it exists (get the actual name from the plan)
+          terraform plan -out=tfplan-initial
+          KV_NAME=$(terraform show -json tfplan-initial | jq -r '.planned_values.root_module.resources[] | select(.type == "azurerm_key_vault") | .values.name' 2>/dev/null || echo "")
+          if [ ! -z "$KV_NAME" ] && az keyvault show --name "$KV_NAME" --resource-group rg-monitoring-production --output none 2>/dev/null; then
+            echo "Importing existing Key Vault: $KV_NAME"
+            KV_ID="/subscriptions/${{ secrets.ARM_SUBSCRIPTION_ID }}/resourceGroups/rg-monitoring-production/providers/Microsoft.KeyVault/vaults/$KV_NAME"
+            terraform import azurerm_key_vault.Monitoring_KeyVault_20EA9E27 "$KV_ID" || echo "Key Vault already in state"
+          fi
+          
+          # Import Metric Alerts if they exist
+          if az monitor metrics alert show --name alert-performance-microsite-production --resource-group rg-monitoring-production --output none 2>/dev/null; then
+            echo "Importing existing Performance Alert..."
+            PERF_ALERT_ID=$(az monitor metrics alert show --name alert-performance-microsite-production --resource-group rg-monitoring-production --query id --output tsv)
+            # Fix case sensitivity in resource ID - Azure CLI returns lowercase, Terraform expects proper case
+            PERF_ALERT_ID_FIXED=$(echo "$PERF_ALERT_ID" | sed 's|/providers/microsoft.insights/|/providers/Microsoft.Insights/|g')
+            echo "Original ID: $PERF_ALERT_ID"
+            echo "Fixed ID: $PERF_ALERT_ID_FIXED"
+            terraform import azurerm_monitor_metric_alert.Monitoring_PerformanceAlert_F49D4E5C "$PERF_ALERT_ID_FIXED" || echo "Performance Alert already in state"
+          fi
+          
+          if az monitor metrics alert show --name alert-uptime-microsite-production --resource-group rg-monitoring-production --output none 2>/dev/null; then
+            echo "Importing existing Uptime Alert..."
+            UPTIME_ALERT_ID=$(az monitor metrics alert show --name alert-uptime-microsite-production --resource-group rg-monitoring-production --query id --output tsv)
+            # Fix case sensitivity in resource ID - Azure CLI returns lowercase, Terraform expects proper case  
+            UPTIME_ALERT_ID_FIXED=$(echo "$UPTIME_ALERT_ID" | sed 's|/providers/microsoft.insights/|/providers/Microsoft.Insights/|g')
+            echo "Original ID: $UPTIME_ALERT_ID"
+            echo "Fixed ID: $UPTIME_ALERT_ID_FIXED"
+            terraform import azurerm_monitor_metric_alert.Monitoring_UptimeAlert_02777EE5 "$UPTIME_ALERT_ID_FIXED" || echo "Uptime Alert already in state"
+          fi
+          
+          # Create a fresh plan after all imports to avoid stale plan issues
+          echo "Creating fresh plan after imports..."
+          terraform plan -out=tfplan
           terraform apply -auto-approve tfplan
 
       - name: Get Static Web App Deployment Token
@@ -647,8 +713,7 @@ jobs:
       - name: Monitor for 30 minutes
         run: |
           echo "Monitoring deployment for 30 minutes..."
-            # TODO: Add trackers for alerts and auto rollback Prod deployment in the event of an alert firing
-            sleep 300 # 5 minutes for now
-          done
+          # TODO: Add trackers for alerts and auto rollback Prod deployment in the event of an alert firing
+          sleep 300 # 5 minutes for now
           
           echo "✅ 30-minute monitoring completed successfully"

@@ -4,6 +4,17 @@ A production-ready public microsite built with Azure Static Web Apps and managed
 
 ## 🏗️ Architecture
 
+![Architecture Diagram](./architecture.png)
+
+This microsite is built on Azure Static Web Apps with a comprehensive monitoring and security stack:
+
+- **Static Web Apps**: Provides global CDN, automatic HTTPS, and integrated CI/CD
+- **Application Insights**: Real-time performance monitoring and user analytics
+- **Log Analytics**: Centralized logging and querying capabilities
+- **Key Vault**: Secure storage for secrets, certificates, and keys
+- **Azure Monitor**: Automated alerts and operational dashboards
+
+For detailed architecture documentation, see [docs/architecture.md](./docs/architecture.md).
 
 ## 💰 Cost Analysis
 
@@ -160,3 +171,77 @@ cdktf deploy production
 2. Configure custom domain in Azure portal
 
 
+## Napkin Design
+
+**Functional Requirements:**
+- Should support adding announcements of Ads initiatives
+- Should support updates to announcements
+- Should be publicly accessible
+- The code should be available on open source
+**Non Functional Requirements:**
+- Support an Availability of 99.95%
+- Support a max latency of x in the North America and Europe regions
+- Support a max latency of y(y>=x) in other regions
+- Total infrastructure cost at low traffic should be under 5$ per month
+- Operators should be able to monitor logs, metrics
+- Should have alarms that trigger in the event of availability or security incidents to keep
+- Should follow all security best practices to ensure no sensitive data is exposed
+
+**Design**
+Major Components:
+All components will be managed and deployed using Terraform CDK since it offers using familiar programming languages to define and provision infrastructure. Allows for uint tests
+Hosting Options
+   Azure App service - NOT CHOSEN
+   App Service provides fully managed hosting for web applications including websites and web APIs.
+   Pros:
+   - High level of Abstraction so focus can be on service code with minimum maintenance
+   - Optimized for web applications and provides automatic scaling, load balancing
+   - Use case meets current requirements for a simple announcements microsite
+   - Supports features like A/B Testing out of the box
+   - Provides TLS termination and CORS out of the box
+   - Provides built-in authentication and authorization features
+   Cons:
+   - Less granular control over scaling and container specification
+   - Higher cost for low TPS - Basic plan B1 would cost ~ $13.140/month
+   - Overly complicated for website that currently is expected to be mostly static
+
+   Azure Container Apps - NOT CHOSEN
+   Azure Container Apps is a serverless platform that allows you to maintain less infrastructure and save costs while running containerized applications.
+   Pros:
+   - A cost effective option for lower TPS which is the expectation for this website
+   - Provides dynamic scaling by default
+   - Supports features like A/B Testing out of the box
+   - Provides TLS termination and CORS out of the box
+   - Provides built-in authentication and authorization features
+   - Granular control over Scaling and Container specifications
+   - With Ingress, don't need to create or manage an Azure Load Balancer, public IP address, or any other Azure resources to enable incoming HTTP requests or TCP traffic.
+   - Azure Front door which can be added easily in the future(higher cost) to provide CDN capabilities and DDOS protection in the event of requirements for DDOS protection or Global CDNs and Latency based routing based on region
+   Cons:
+   - Overly complicated for a website which is expected to be mostly static
+   - If scaled to 0, can have cold start problems. Need to choose between cost and latency optimization for this case
+   - Lower abstraction level compared to App services where the container needs to be managed
+
+   Azure Static Web Apps with Azure Functions for backend - a service that automatically deploys full stack web apps to Azure from a code repository. This will be a free option to store the static components of the website. - CHOSEN OPTION - Matches the use case better, even if Azure container apps could be cheaper, total cost of ownership likely to be lower because of simplicity
+   Pros
+   - Provides global CDN by default
+   - Specifically built for mostly static websites
+   - Can be extended to use Azure functions if the need for dynamic updates is required(Expected for things like forms where latency would not be as important so could even tolerate cold starts to save on cost)
+   - High level of Abstraction
+   - Free tier includes SSL, custom domains
+   - 
+   Cons
+   - Would need to add above options or Azure functions to support serverside API calls
+   - Premium version costs can go to 9$/month if it becomes required
+
+**Deployment Pipeline**
+CI/CD Managed by Github Actions, specified in YAML
+
+**Stages**
+Staging
+Prod
+Gamma can be added if logic becomes more complex later
+
+**Regions**
+East US
+
+Although requirements state Low latency is a requirement in Europe. CDNs will handle that, with the current requirements expecting a mostly static website that should suffice, can add region if requirements change

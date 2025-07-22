@@ -14,7 +14,15 @@ const connectionString = process.env.APPLICATIONINSIGHTS_CONNECTION_STRING ||
                          process.env.APPINSIGHTS_INSTRUMENTATIONKEY || 
                          'PLACEHOLDER_INSTRUMENTATION_KEY';
 
-const htmlFilePath = path.join(__dirname, '../website/index.html');
+// Check for dist/website first (during deployment), fallback to website (during development)
+const distHtmlPath = path.join(__dirname, '../dist/website/index.html');
+const sourceHtmlPath = path.join(__dirname, '../website/index.html');
+
+const htmlFilePath = fs.existsSync(distHtmlPath) ? distHtmlPath : sourceHtmlPath;
+
+console.log(`🔍 Checking for dist file: ${distHtmlPath} - ${fs.existsSync(distHtmlPath) ? 'EXISTS' : 'NOT FOUND'}`);
+console.log(`🔍 Checking for source file: ${sourceHtmlPath} - ${fs.existsSync(sourceHtmlPath) ? 'EXISTS' : 'NOT FOUND'}`);
+console.log(`📝 Using file: ${htmlFilePath}`);
 
 if (fs.existsSync(htmlFilePath)) {
   let htmlContent = fs.readFileSync(htmlFilePath, 'utf8');
@@ -26,9 +34,10 @@ if (fs.existsSync(htmlFilePath)) {
       `connectionString: "${connectionString}"`
     );
     
-    console.log('✅ Application Insights connection string configured');
+    console.log(`✅ Application Insights connection string configured in ${htmlFilePath}`);
+    console.log(`🔗 Connection string: ${connectionString.substring(0, 50)}...`);
   } else {
-    console.log('⚠️ Using placeholder connection string - Application Insights not configured');
+    console.log(`⚠️ Using placeholder connection string in ${htmlFilePath} - Application Insights not configured`);
   }
   
   fs.writeFileSync(htmlFilePath, htmlContent);
